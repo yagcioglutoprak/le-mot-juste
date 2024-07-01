@@ -2,7 +2,7 @@
 
 Le Mot Juste is an engaging, time-attack French word game designed to help learners improve their French vocabulary in a fun and interactive way. 
 
-[Video]([https://link-url-here.org](https://x.com/i/status/1807607335629545909))
+[Video](https://x.com/i/status/1807607335629545909)
 
 ## Features:
 
