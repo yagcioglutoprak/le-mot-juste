@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Le Mot Juste - Time Attack French Word Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .option-button {
+            transition: all 0.3s ease;
+        }
+        .option-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .progress-bar {
+            transition: width 0.5s ease-in-out;
+        }
+        .power-up-button {
+            transition: all 0.3s ease;
+        }
+        .power-up-button:hover:not(:disabled) {
+            transform: scale(1.05);
+        }
+        .animate-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: .5;
+            }
+        }
+        .floating-text {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            font-weight: bold;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+    <div class="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
+        <h1 class="text-3xl font-bold text-center mb-6 text-indigo-600">Le Mot Juste</h1>
+        <div id="tutorial" class="hidden text-center mb-6">
+            <h2 class="text-2xl font-semibold mb-4">How to Play</h2>
+            <p class="mb-4">1. You'll see an English word.</p>
+            <p class="mb-4">2. Choose the correct French translation from the options.</p>
+            <p class="mb-4">3. Use power-ups to help you out!</p>
+            <p class="mb-4">4. Press number keys 1-4 to select answers quickly!</p>
+            <button id="close-tutorial" class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors">Got it!</button>
+        </div>
+        <div id="difficulty-select" class="hidden text-center mb-6">
+            <h2 class="text-2xl font-semibold mb-4">Select Difficulty</h2>
+            <button class="difficulty-button bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors m-2" data-difficulty="easy">Easy</button>
+            <button class="difficulty-button bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 transition-colors m-2" data-difficulty="medium">Medium</button>
+            <button class="difficulty-button bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition-colors m-2" data-difficulty="hard">Hard</button>
+        </div>
+        <div id="game-container" class="hidden">
+            <div id="word-container" class="text-center mb-6">
+                <p id="english-word" class="text-2xl font-semibold mb-2"></p>
+                <p id="timer" class="text-xl text-gray-600 mt-2"></p>
+            </div>
+            <div class="mb-4 bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full progress-bar" style="width: 100%"></div>
+            </div>
+            <div id="options-container" class="grid grid-cols-2 gap-4 mb-6">
+                <!-- Options will be dynamically inserted here -->
+            </div>
+            <div class="text-center mb-4">
+                <p id="score" class="text-xl font-semibold">Score: 0</p>
+                <p id="streak" class="text-lg text-green-600">Streak: 0</p>
+                <p id="level" class="text-lg text-purple-600">Level: 1</p>
+                <p id="words-answered" class="text-lg text-blue-600">Words: 0</p>
+            </div>
+            <div class="text-center mb-4 flex justify-center space-x-4">
+                <button id="power-up-time" class="power-up-button bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors flex items-center">
+                    <i class="fas fa-clock mr-2"></i> +5 sec (5 pts)
+                </button>
+                <button id="power-up-skip" class="power-up-button bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 transition-colors flex items-center">
+                    <i class="fas fa-forward mr-2"></i> Skip (10 pts)
+                </button>
+                <button id="power-up-hint" class="power-up-button bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors flex items-center">
+                    <i class="fas fa-lightbulb mr-2"></i> Hint (15 pts)
+                </button>
+            </div>
+        </div>
+        <div id="start-screen" class="text-center">
+            <h2 class="text-2xl font-semibold mb-4">Ready to test your French?</h2>
+            <p class="mb-4">You have 60 seconds to answer as many words as you can. Good luck!</p>
+            <button id="start-game" class="bg-indigo-600 text-white px-6 py-3 rounded-md hover:bg-indigo-700 transition-colors text-lg animate-pulse">Start Game</button>
+            <button id="show-tutorial" class="bg-gray-300 text-gray-800 px-6 py-3 rounded-md hover:bg-gray-400 transition-colors text-lg mt-4">How to Play</button>
+        </div>
+        <div id="end-screen" class="hidden text-center">
+            <h2 class="text-2xl font-semibold mb-4">Game Over!</h2>
+            <p id="final-score" class="text-xl mb-4"></p>
+            <p id="final-words" class="text-lg mb-4"></p>
+            <button id="play-again" class="bg-indigo-600 text-white px-6 py-3 rounded-md hover:bg-indigo-700 transition-colors text-lg">Play Again</button>
+            <div class="mt-4">
+                <button id="share-score" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors">
+                    <i class="fab fa-twitter mr-2"></i> Share Score
+                </button>
+            </div>
+        </div>
+        <div id="leaderboard" class="mt-6">
+            <h2 class="text-xl font-semibold mb-2">Leaderboard</h2>
+            <ul id="leaderboard-list" class="list-decimal list-inside">
+                <!-- Leaderboard entries will be inserted here -->
+            </ul>
+        </div>
+        <div id="audio-controls" class="mt-6">
+            <h3 class="text-lg font-semibold mb-2">Music Controls</h3>
+            <div class="flex items-center space-x-4">
+                <button id="toggle-music" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors">
+                    <i class="fas fa-pause mr-2"></i> Pause Music
+                </button>
+                <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="0.5" class="w-32">
+            </div>
+            <button id="start-music" class="hidden bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors mt-2">
+                <i class="fas fa-play mr-2"></i> Start Music
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const GITHUB_WORDS_URL = 'https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/fr/fr_50k.txt';
+        
+        let words = [];
+        let usedWords = new Set();
+        let currentWord = '';
+        let score = 0;
+        let streak = 0;
+        let level = 1;
+        let wordsAnswered = 0;
+        let gameTimer;
+        let timeLeft = 60;
+        let timeBoostCooldown = 0;
+        let difficulty = 'medium';
+        let wordHistory = [];
+        let achievements = {
+            words100: false,
+            streak10: false,
+            level5: false
+        };
+
+        const englishWordElement = document.getElementById('english-word');
+        const optionsContainer = document.getElementById('options-container');
+        const scoreElement = document.getElementById('score');
+        const streakElement = document.getElementById('streak');
+        const levelElement = document.getElementById('level');
+        const wordsAnsweredElement = document.getElementById('words-answered');
+        const timerElement = document.getElementById('timer');
+        const leaderboardList = document.getElementById('leaderboard-list');
+        const progressBar = document.getElementById('progress-bar');
+        const powerUpTimeButton = document.getElementById('power-up-time');
+        const powerUpSkipButton = document.getElementById('power-up-skip');
+        const powerUpHintButton = document.getElementById('power-up-hint');
+        const startScreen = document.getElementById('start-screen');
+        const gameContainer = document.getElementById('game-container');
+        const endScreen = document.getElementById('end-screen');
+        const startGameButton = document.getElementById('start-game');
+        const playAgainButton = document.getElementById('play-again');
+        const tutorialScreen = document.getElementById('tutorial');
+        const closeTutorialButton = document.getElementById('close-tutorial');
+        const showTutorialButton = document.getElementById('show-tutorial');
+        const difficultySelect = document.getElementById('difficulty-select');
+        const difficultyButtons = document.querySelectorAll('.difficulty-button');
+        const shareScoreButton = document.getElementById('share-score');
+
+        // Audio setup
+        const correctSound = new Audio('correct.mp3');
+        const wrongSound = new Audio('wrong.mp3');
+        const backgroundMusic = new Audio('background_music.mp3');
+        backgroundMusic.loop = true;
+
+        const toggleMusicButton = document.getElementById('toggle-music');
+        const volumeSlider = document.getElementById('volume-slider');
+        const startMusicButton = document.getElementById('start-music');
+
+        function playBackgroundMusic() {
+            backgroundMusic.play().then(() => {
+                toggleMusicButton.innerHTML = '<i class="fas fa-pause mr-2"></i> Pause Music';
+                startMusicButton.classList.add('hidden');
+            }).catch(error => {
+                console.log("Auto-play was prevented. User interaction required to start music.");
+                startMusicButton.classList.remove('hidden');
+            });
+        }
+
+        window.addEventListener('load', playBackgroundMusic);
+
+        toggleMusicButton.addEventListener('click', () => {
+            if (backgroundMusic.paused) {
+                backgroundMusic.play();
+                toggleMusicButton.innerHTML = '<i class="fas fa-pause mr-2"></i> Pause Music';
+            } else {
+                backgroundMusic.pause();
+                toggleMusicButton.innerHTML = '<i class="fas fa-play mr-2"></i> Play Music';
+            }
+        });
+
+        startMusicButton.addEventListener('click', () => {
+            playBackgroundMusic();
+        });
+
+        volumeSlider.addEventListener('input', (e) => {
+            const volume = parseFloat(e.target.value);
+            backgroundMusic.volume = volume;
+            correctSound.volume = volume;
+            wrongSound.volume = volume;
+        });
+
+        async function fetchWords() {
+            const response = await fetch(GITHUB_WORDS_URL);
+            const text = await response.text();
+            return text.split('\n').map(line => {
+                const [word, frequency] = line.split(' ');
+                return { word, frequency: parseInt(frequency) };
+            });
+        }
+
+        function getWordByLevel(level) {
+            const minIndex = (level - 1) * 1000;
+            const maxIndex = Math.min(level * 1000, words.length);
+            let attempts = 0;
+            let randomWord;
+
+            do {
+                const randomIndex = Math.floor(Math.random() * (maxIndex - minIndex)) + minIndex;
+                randomWord = words[randomIndex];
+                attempts++;
+            } while (usedWords.has(randomWord.word) && attempts < 50);
+
+            if (attempts >= 50) {
+                usedWords.clear();
+            }
+
+            usedWords.add(randomWord.word);
+            return randomWord;
+        }
+
+        async function getTranslation(word) {
+            const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(word)}&langpair=fr|en`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data.responseStatus === 200 && data.responseData.translatedText) {
+                    return data.responseData.translatedText;
+                } else {
+                    console.error('Translation error:', data);
+                    return 'Translation error';
+                }
+            } catch (error) {
+                console.error('Fetch error:', error);
+                return 'Fetch error';
+            }
+        }
+
+        function createOptions(correctWord) {
+            const options = [correctWord.word];
+            while (options.length < 4) {
+                const randomWord = getWordByLevel(level).word;
+                if (!options.includes(randomWord)) {
+                    options.push(randomWord);
+                }
+            }
+            return options.sort(() => Math.random() - 0.5);
+        }
+
+        async function updateUI(word, options) {
+            const translation = await getTranslation(word.word);
+            englishWordElement.textContent = translation;
+            optionsContainer.innerHTML = '';
+            options.forEach((option, index) => {
+                const button = document.createElement('button');
+                button.textContent = option;
+                button.className = 'option-button bg-gray-200 px-4 py-2 rounded-md hover:bg-gray-300 transition-colors';
+                button.dataset.index = index + 1;
+                button.addEventListener('click', () => checkAnswer(option));
+                optionsContainer.appendChild(button);
+            });
+        }
+
+        async function checkAnswer(selectedOption) {
+            const buttons = optionsContainer.querySelectorAll('button');
+            buttons.forEach(button => {
+                button.disabled = true;
+                if (button.textContent === currentWord.word) {
+                    button.classList.add('bg-green-500', 'text-white');
+                } else if (button.textContent === selectedOption) {
+                    button.classList.add('bg-red-500', 'text-white');
+                }
+            });
+
+            const correct = selectedOption === currentWord.word;
+            wordHistory.push({
+                word: currentWord.word,
+                translation: englishWordElement.textContent,
+                correct: correct
+            });
+
+            const utterance = new SpeechSynthesisUtterance(currentWord.word);
+            utterance.lang = 'fr-FR';
+            speechSynthesis.speak(utterance);
+
+            if (correct) {
+                correctSound.play();
+                const basePoints = 10;
+                const levelBonus = level * 2;
+                const streakBonus = streak * 2;
+                const earnedPoints = basePoints + levelBonus + streakBonus;
+                
+                score += earnedPoints;
+                streak++;
+                wordsAnswered++;
+                
+                anime({
+                    targets: scoreElement,
+                    innerHTML: [score - earnedPoints, score],
+                    round: 1,
+                    easing: 'easeInOutExpo'
+                });
+                
+                showFloatingText(`+${earnedPoints}`, 'green');
+                checkAchievements();
+            } else {
+                wrongSound.play();
+                streak = 0;
+                showFloatingText('Wrong', 'red');
+            }
+
+            streakElement.textContent = `Streak: ${streak}`;
+            wordsAnsweredElement.textContent = `Words: ${wordsAnswered}`;
+            updateLevelAndProgress();
+            
+            setTimeout(() => {
+                nextWord();
+            }, 1000);
+        }
+
+        function showFloatingText(text, color) {
+            const floatingText = document.createElement('div');
+            floatingText.textContent = text;
+            floatingText.className = 'floating-text';
+            floatingText.style.color = color;
+            document.body.appendChild(floatingText);
+
+            anime({
+                targets: floatingText,
+                translateY: -100,
+                opacity: 0,
+                duration: 1500,
+                easing: 'easeOutExpo',
+                complete: function() {
+                    document.body.removeChild(floatingText);
+                }
+            });
+        }
+
+        function updateTimer() {
+            timeLeft--;
+            timerElement.textContent = `Time left: ${timeLeft}s`;
+            progressBar.style.width = `${(timeLeft / 60) * 100}%`;
+            
+            if (timeLeft <= 10) {
+                timerElement.classList.add('text-red-600', 'font-bold');
+            } else {
+                timerElement.classList.remove('text-red-600', 'font-bold');
+            }
+            
+            if (timeBoostCooldown > 0) {
+                timeBoostCooldown--;
+                powerUpTimeButton.disabled = true;
+                powerUpTimeButton.classList.add('opacity-50');
+            } else {
+                powerUpTimeButton.disabled = false;
+                powerUpTimeButton.classList.remove('opacity-50');
+            }
+            
+            if (timeLeft <= 0) {
+                endGame();
+            }
+        }
+
+        function updateLevelAndProgress() {
+            const wordsPerLevel = 10;
+            level = Math.floor(wordsAnswered / wordsPerLevel) + 1;
+            levelElement.textContent = `Level: ${level}`;
+        }
+
+        function updateLeaderboard() {
+            let leaderboard = JSON.parse(localStorage.getItem('leaderboard')) || [];
+            leaderboard.push({ score, wordsAnswered, date: new Date().toISOString(), difficulty });
+            leaderboard.sort((a, b) => b.score - a.score);
+            leaderboard = leaderboard.slice(0, 5);
+            localStorage.setItem('leaderboard', JSON.stringify(leaderboard));
+
+            leaderboardList.innerHTML = '';
+            leaderboard.forEach(entry => {
+                const li = document.createElement('li');
+                li.textContent = `${entry.score} points (${entry.wordsAnswered} words) on ${new Date(entry.date).toLocaleDateString()} - ${entry.difficulty}`;
+                leaderboardList.appendChild(li);
+            });
+        }
+
+        async function nextWord() {
+            currentWord = getWordByLevel(level);
+            const options = createOptions(currentWord);
+            await updateUI(currentWord, options);
+        }
+
+        function startGame() {
+            score = 0;
+            streak = 0;
+            level = 1;
+            wordsAnswered = 0;
+            timeLeft = 60;
+            timeBoostCooldown = 0;
+            usedWords.clear();
+            wordHistory = [];
+
+            scoreElement.textContent = 'Score: 0';
+            streakElement.textContent = 'Streak: 0';
+            levelElement.textContent = 'Level: 1';
+            wordsAnsweredElement.textContent = 'Words: 0';
+
+            startScreen.classList.add('hidden');
+            gameContainer.classList.remove('hidden');
+            endScreen.classList.add('hidden');
+
+            gameTimer = setInterval(updateTimer, 1000);
+            nextWord();
+
+            anime({
+                targets: gameContainer,
+                opacity: [0, 1],
+                translateY: [20, 0],
+                duration: 800,
+                easing: 'easeOutExpo'
+            });
+        }
+
+        function endGame() {
+            clearInterval(gameTimer);
+            gameContainer.classList.add('hidden');
+            endScreen.classList.remove('hidden');
+            document.getElementById('final-score').textContent = `Final Score: ${score}`;
+            document.getElementById('final-words').textContent = `Words Answered: ${wordsAnswered}`;
+            updateLeaderboard();
+
+            anime({
+                targets: endScreen,
+                opacity: [0, 1],
+                translateY: [20, 0],
+                duration: 800,
+                easing: 'easeOutExpo'
+            });
+        }
+
+        startGameButton.addEventListener('click', () => {
+            startScreen.classList.add('hidden');
+            difficultySelect.classList.remove('hidden');
+        });
+
+        difficultyButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                difficulty = button.dataset.difficulty;
+                difficultySelect.classList.add('hidden');
+                startGame();
+            });
+        });
+
+        playAgainButton.addEventListener('click', () => {
+            endScreen.classList.add('hidden');
+            difficultySelect.classList.remove('hidden');
+        });
+
+        powerUpTimeButton.addEventListener('click', () => {
+            if (score >= 5 && timeBoostCooldown === 0) {
+                score -= 5;
+                timeLeft = Math.min(timeLeft + 5, 60);
+                timeBoostCooldown = 10;
+                scoreElement.textContent = `Score: ${score}`;
+                showFloatingText('+5 sec', 'green');
+                powerUpTimeButton.disabled = true;
+                powerUpTimeButton.classList.add('opacity-50');
+            } else if (timeBoostCooldown > 0) {
+                showFloatingText('Cooldown', 'red');
+            } else {
+                showFloatingText('Not enough points', 'red');
+            }
+        });
+
+        powerUpSkipButton.addEventListener('click', () => {
+            if (score >= 10) {
+                score -= 10;
+                scoreElement.textContent = `Score: ${score}`;
+                showFloatingText('Skipped', 'yellow');
+                nextWord();
+            } else {
+                showFloatingText('Not enough points', 'red');
+            }
+        });
+
+        powerUpHintButton.addEventListener('click', () => {
+            if (score >= 15) {
+                score -= 15;
+                scoreElement.textContent = `Score: ${score}`;
+                const correctButton = Array.from(optionsContainer.children).find(button => button.textContent === currentWord.word);
+                correctButton.classList.add('bg-blue-300');
+                showFloatingText('Hint used', 'blue');
+            } else {
+                showFloatingText('Not enough points', 'red');
+            }
+        });
+
+        showTutorialButton.addEventListener('click', () => {
+            startScreen.classList.add('hidden');
+            tutorialScreen.classList.remove('hidden');
+        });
+
+        closeTutorialButton.addEventListener('click', () => {
+            tutorialScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+        });
+
+        shareScoreButton.addEventListener('click', () => {
+            const tweetText = `I just scored ${score} points in Le Mot Juste, the French word game! Can you beat my score? #LeMotJuste`;
+            const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
+            window.open(twitterUrl, '_blank');
+        });
+
+        function checkAchievements() {
+            if (wordsAnswered >= 100 && !achievements.words100) {
+                achievements.words100 = true;
+                showFloatingText('Achievement: 100 Words!', 'gold');
+            }
+            if (streak >= 10 && !achievements.streak10) {
+                achievements.streak10 = true;
+                showFloatingText('Achievement: 10 Streak!', 'gold');
+            }
+            if (level >= 5 && !achievements.level5) {
+                achievements.level5 = true;
+                showFloatingText('Achievement: Level 5!', 'gold');
+            }
+        }
+
+        async function initGame() {
+            words = await fetchWords();
+            updateLeaderboard();
+            const initialVolume = parseFloat(volumeSlider.value);
+            backgroundMusic.volume = initialVolume;
+            correctSound.volume = initialVolume;
+            wrongSound.volume = initialVolume;
+        }
+
+        initGame();
+
+        document.addEventListener('keydown', (e) => {
+            if (gameContainer.classList.contains('hidden')) return;
+            
+            const options = optionsContainer.children;
+            if (e.key >= '1' && e.key <= '4') {
+                const index = parseInt(e.key) - 1;
+                if (options[index]) {
+                    options[index].click();
+                }
+            }
+        });
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js').then(registration => {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                }, err => {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+            });
+        }
+    </script>
+</body>
+</html>
